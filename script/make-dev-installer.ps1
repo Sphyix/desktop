@@ -56,10 +56,15 @@ if ($Install) {
 Invoke-Step 'yarn build:prod' { yarn build:prod }
 Invoke-Step 'yarn package'    { yarn package }
 
-$installerDir = Join-Path $repoRoot 'dist\installer'
+# Squirrel writes Setup.exe, RELEASES and the nupkg directly into dist/
+# (not dist/installer/, despite what getWindowsStandalonePath suggests).
+$installerDir = Join-Path $repoRoot 'dist'
 Write-Host ""
 Write-Host "===== Output =====" -ForegroundColor Green
-Get-ChildItem $installerDir | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length / 1MB, 1)}}
+Get-ChildItem $installerDir -File |
+    Where-Object { $_.Name -notin @('bundle-size.json', 'renderer.report.html') } |
+    Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length / 1MB, 1)}} |
+    Format-Table -AutoSize
 
 $setupExe = Get-ChildItem $installerDir -Filter "GitHubDesktop${Suffix}Setup-*.exe" |
     Select-Object -First 1
