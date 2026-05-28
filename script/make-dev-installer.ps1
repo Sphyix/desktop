@@ -14,7 +14,10 @@ param(
     [string]$Suffix = '-dev'
 )
 
-$ErrorActionPreference = 'Stop'
+# Keep going on non-terminating errors (e.g. electron-packager writing
+# progress to stderr would otherwise abort the script under
+# ErrorActionPreference=Stop). We check $LASTEXITCODE explicitly instead.
+$ErrorActionPreference = 'Continue'
 
 # Run from the repo root regardless of where the caller cwd is.
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -25,7 +28,8 @@ function Invoke-Step($Name, [scriptblock]$Block) {
     Write-Host "===== $Name =====" -ForegroundColor Cyan
     & $Block
     if ($LASTEXITCODE -ne 0) {
-        throw "$Name failed (exit $LASTEXITCODE)"
+        Write-Host "$Name failed (exit $LASTEXITCODE)" -ForegroundColor Red
+        exit $LASTEXITCODE
     }
 }
 
