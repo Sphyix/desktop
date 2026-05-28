@@ -712,7 +712,13 @@ function createStateUpdate<T extends IFilterListItem, GroupIdentifier>(
         }))
 
     if (!items.length) {
-      continue
+      // While filtering, an empty group means no matches survived and the
+      // whole section should disappear. With no filter, callers may
+      // intentionally pass empty groups (e.g. to render a collapsed section
+      // header only); render the header alone in that case.
+      if (filter.length > 0 || !props.renderGroupHeader) {
+        continue
+      }
     }
 
     groupIndices.push(idx)

@@ -72,6 +72,33 @@
     text-overflow: ellipsis;
     overflow-x: hidden;
     white-space: nowrap;
+
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    padding-left: 0;
+    padding-right: 0;
+
+    .group-header-chevron {
+      flex-shrink: 0;
+      margin-right: var(--spacing-half);
+    }
+
+    .group-header-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &:hover {
+      color: var(--list-item-hover-color, currentColor);
+    }
   }
 
   .new-repository-button {

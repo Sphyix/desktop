@@ -19,13 +19,15 @@ import { showContextualMenu } from '../../lib/menu-item'
 import { IMenuItem } from '../../lib/menu-item'
 import { PopupType } from '../../models/popup'
 import { encodePathAsUrl } from '../../lib/path'
-import { TooltippedContent } from '../lib/tooltipped-content'
 import memoizeOne from 'memoize-one'
 import { KeyboardShortcut } from '../keyboard-shortcut/keyboard-shortcut'
 import { generateRepositoryListContextMenu } from '../repositories-list/repository-list-item-context-menu'
 import { SectionFilterList } from '../lib/section-filter-list'
 import { assertNever } from '../../lib/fatal-error'
 import { IAheadBehind } from '../../models/branch'
+import { getObject, setObject } from '../../lib/local-storage'
+
+const CollapsedGroupsStorageKey = 'repository-list-collapsed-groups'
 
 const BlankSlateImage = encodePathAsUrl(__dirname, 'static/empty-no-repo.svg')
 
@@ -79,6 +81,16 @@ interface IRepositoriesListProps {
 interface IRepositoriesListState {
   readonly newRepositoryMenuExpanded: boolean
   readonly selectedItem: IRepositoryListItem | null
+  readonly collapsedGroups: ReadonlySet<string>
+}
+
+function loadCollapsedGroups(): ReadonlySet<string> {
+  const stored = getObject<ReadonlyArray<string>>(CollapsedGroupsStorageKey)
+  return new Set(Array.isArray(stored) ? stored : [])
+}
+
+function persistCollapsedGroups(groups: ReadonlySet<string>) {
+  setObject(CollapsedGroupsStorageKey, Array.from(groups))
 }
 
 const RowHeight = 29
@@ -149,7 +161,40 @@ export class RepositoriesList extends React.Component<
     this.state = {
       newRepositoryMenuExpanded: false,
       selectedItem: null,
+      collapsedGroups: loadCollapsedGroups(),
     }
+  }
+
+  private applyCollapsedGroups = memoizeOne(
+    (
+      groups: ReadonlyArray<
+        IFilterListGroup<IRepositoryListItem, RepositoryListGroup>
+      >,
+      collapsedGroups: ReadonlySet<string>,
+      isFiltering: boolean
+    ) => {
+      if (isFiltering || collapsedGroups.size === 0) {
+        return groups
+      }
+      return groups.map(g =>
+        collapsedGroups.has(getGroupKey(g.identifier))
+          ? { ...g, items: [] as ReadonlyArray<IRepositoryListItem> }
+          : g
+      )
+    }
+  )
+
+  private toggleGroupCollapse = (key: string) => {
+    this.setState(prev => {
+      const next = new Set(prev.collapsedGroups)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      persistCollapsedGroups(next)
+      return { collapsedGroups: next }
+    })
   }
 
   private renderItem = (item: IRepositoryListItem, matches: IMatches) => {
@@ -258,18 +303,33 @@ export class RepositoriesList extends React.Component<
 
   private renderGroupHeader = (group: RepositoryListGroup) => {
     const label = this.getGroupLabel(group)
+    const groupKey = getGroupKey(group)
+    const isCollapsed = this.state.collapsedGroups.has(groupKey)
 
     return (
-      <TooltippedContent
-        key={getGroupKey(group)}
+      <button
+        key={groupKey}
         className="filter-list-group-header"
-        tooltip={label}
-        onlyWhenOverflowed={true}
-        tagName="div"
+        onClick={this.onGroupHeaderClick}
+        data-group-key={groupKey}
+        aria-expanded={!isCollapsed}
+        title={label}
+        type="button"
       >
-        {label}
-      </TooltippedContent>
+        <Octicon
+          className="group-header-chevron"
+          symbol={isCollapsed ? octicons.chevronRight : octicons.chevronDown}
+        />
+        <span className="group-header-label">{label}</span>
+      </button>
     )
+  }
+
+  private onGroupHeaderClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const key = event.currentTarget.dataset.groupKey
+    if (key) {
+      this.toggleGroupCollapse(key)
+    }
   }
 
   private onItemClick = (item: IRepositoryListItem) => {
@@ -317,10 +377,16 @@ export class RepositoriesList extends React.Component<
       this.getGroupLabel(groups[group].identifier)
 
   public render() {
-    const groups = this.getRepositoryGroups(
+    const allGroups = this.getRepositoryGroups(
       this.props.repositories,
       this.props.localRepositoryStateLookup,
       this.props.recentRepositories
+    )
+
+    const groups = this.applyCollapsedGroups(
+      allGroups,
+      this.state.collapsedGroups,
+      this.props.filterText.length > 0
     )
 
     // So there's two types of selection at play here. There's the repository
