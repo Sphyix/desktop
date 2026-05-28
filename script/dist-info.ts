@@ -95,7 +95,7 @@ export function getWindowsDeltaNugetPackagePath() {
 }
 
 export function getWindowsIdentifierName() {
-  return 'GitHubDesktop'
+  return `GitHubDesktop${process.env.DESKTOP_FORK_SUFFIX ?? ''}`
 }
 
 export function getBundleSizes() {

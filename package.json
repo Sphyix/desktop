@@ -162,6 +162,7 @@
     "eslint-plugin-github": "^5.1.5",
     "markdownlint-cli": "^0.32.2",
     "node-test-github-reporter": "^1.2.0",
+    "patch-package": "^8.0.0",
     "playwright": "^1.58.2",
     "reserved-words": "^0.1.2",
     "tsconfig-paths": "^3.9.0",

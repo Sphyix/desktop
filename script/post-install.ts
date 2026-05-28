@@ -43,6 +43,16 @@ function findYarnVersion(callback: (path: string) => void) {
 
 findYarnVersion(path => {
   let result = spawnSync(
+    process.execPath,
+    [require.resolve('patch-package/index.js')],
+    options
+  )
+
+  if (result.status !== 0) {
+    process.exit(result.status || 1)
+  }
+
+  result = spawnSync(
     'node',
     [path, '--cwd', 'app', 'install', '--force'],
     options
