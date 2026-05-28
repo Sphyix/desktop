@@ -78,6 +78,10 @@ findYarnVersion(path => {
     process.exit(result.status || 1)
   }
 
+  if (process.env.SKIP_PLAYWRIGHT_FFMPEG === '1') {
+    return
+  }
+
   // Capture output here so CI failures include the Playwright-specific error.
   result = spawnSync(
     process.execPath,
