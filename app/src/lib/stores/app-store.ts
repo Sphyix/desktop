@@ -531,7 +531,10 @@ export class AppStore extends TypedBaseStore<IAppState> {
   private currentBanner: Banner | null = null
   private emitQueued = false
 
-  private readonly localRepositoryStateLookup = new Map<
+  // Replaced (not mutated) on every change so consumers relying on reference
+  // equality — notably the memoized grouping in RepositoriesList — see fresh
+  // data after push/fetch/commit instead of stale ahead-behind indicators.
+  private localRepositoryStateLookup = new Map<
     number,
     ILocalRepositoryState
   >()
@@ -3802,44 +3805,48 @@ export class AppStore extends TypedBaseStore<IAppState> {
     repository: Repository,
     status: IStatusResult | null
   ): Promise<void> {
-    const lookup = this.localRepositoryStateLookup
+    const next = new Map(this.localRepositoryStateLookup)
 
-    if (repository.missing) {
-      lookup.delete(repository.id)
-      return
+    if (repository.missing || status === null) {
+      if (!next.delete(repository.id)) {
+        return
+      }
+    } else {
+      next.set(repository.id, {
+        aheadBehind: status.branchAheadBehind || null,
+        changedFilesCount: status.workingDirectory.files.length,
+      })
     }
 
-    if (status === null) {
-      lookup.delete(repository.id)
-      return
-    }
-
-    lookup.set(repository.id, {
-      aheadBehind: status.branchAheadBehind || null,
-      changedFilesCount: status.workingDirectory.files.length,
-    })
+    this.localRepositoryStateLookup = next
   }
   /**
    * Refresh indicator in repository list for a specific repository
    */
   private refreshIndicatorForRepository = async (repository: Repository) => {
-    const lookup = this.localRepositoryStateLookup
+    const removeFromLookup = () => {
+      if (this.localRepositoryStateLookup.has(repository.id)) {
+        const next = new Map(this.localRepositoryStateLookup)
+        next.delete(repository.id)
+        this.localRepositoryStateLookup = next
+      }
+    }
 
     if (repository.missing) {
-      lookup.delete(repository.id)
+      removeFromLookup()
       return
     }
 
     const exists = await pathExists(repository.path)
     if (!exists) {
-      lookup.delete(repository.id)
+      removeFromLookup()
       return
     }
 
     const gitStore = this.gitStoreCache.get(repository)
     const status = await gitStore.loadStatus()
     if (status === null) {
-      lookup.delete(repository.id)
+      removeFromLookup()
       return
     }
 
@@ -3855,13 +3862,15 @@ export class AppStore extends TypedBaseStore<IAppState> {
     if (await this.shouldBackgroundFetch(repository, lastPush)) {
       const aheadBehind = await this.fetchForRepositoryIndicator(repository)
 
-      const existing = lookup.get(repository.id)
-      lookup.set(repository.id, {
+      const existing = this.localRepositoryStateLookup.get(repository.id)
+      const next = new Map(this.localRepositoryStateLookup)
+      next.set(repository.id, {
         aheadBehind: aheadBehind,
         // We don't need to update changedFilesCount here since it was already
         // set when calling `updateSidebarIndicator()` with the status object.
         changedFilesCount: existing?.changedFilesCount ?? 0,
       })
+      this.localRepositoryStateLookup = next
       this.emitUpdate()
     }
   }
