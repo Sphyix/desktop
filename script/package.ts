@@ -82,6 +82,12 @@ function packageWindows() {
 
   const iconUrl = 'https://desktop.githubusercontent.com/app-icon.ico'
 
+  // Squirrel/WiX rejects file IDs containing '-' when binding
+  // !(bind.FileVersion.<name>.exe), so an MSI cannot be generated for fork
+  // builds whose identifier carries a hyphen (e.g. GitHubDesktop-dev). Skip
+  // the MSI in that case; the standalone .exe installer is unaffected.
+  const isForkBuild = (process.env.DESKTOP_FORK_SUFFIX ?? '') !== ''
+
   const nugetPkgName = getWindowsIdentifierName()
   const options: electronInstaller.Options = {
     name: nugetPkgName,
@@ -94,7 +100,9 @@ function packageWindows() {
     exe: `${nugetPkgName}.exe`,
     title: productName,
     setupExe: getWindowsStandaloneName(),
-    setupMsi: getWindowsInstallerName(),
+    ...(isForkBuild
+      ? { noMsi: true }
+      : { setupMsi: getWindowsInstallerName() }),
   }
 
   if (shouldMakeDelta()) {
