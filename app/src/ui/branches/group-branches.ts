@@ -13,7 +13,8 @@ export function groupBranches(
   defaultBranch: Branch | null,
   currentBranch: Branch | null,
   allBranches: ReadonlyArray<Branch>,
-  recentBranches: ReadonlyArray<Branch>
+  recentBranches: ReadonlyArray<Branch>,
+  commitAuthorDates?: ReadonlyMap<string, Date>
 ): ReadonlyArray<IFilterListGroup<IBranchListItem>> {
   const groups = new Array<IFilterListGroup<IBranchListItem>>()
 
@@ -59,6 +60,12 @@ export function groupBranches(
       !recentBranchNames.has(b.name) &&
       !b.isDesktopForkRemoteBranch
   )
+
+  if (commitAuthorDates !== undefined) {
+    const dateFor = (b: Branch) =>
+      commitAuthorDates.get(b.tip.sha)?.getTime() ?? 0
+    remainingBranches.sort((a, b) => dateFor(b) - dateFor(a))
+  }
 
   const remainingItems = remainingBranches.map(b => ({
     text: [b.name],

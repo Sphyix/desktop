@@ -182,7 +182,8 @@ export class BranchList extends React.Component<
       this.props.defaultBranch,
       this.props.currentBranch,
       this.props.allBranches,
-      this.props.recentBranches
+      this.props.recentBranches,
+      this.state.commitAuthorDates
     )
   }
 
