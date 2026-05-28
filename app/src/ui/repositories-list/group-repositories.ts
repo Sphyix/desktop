@@ -1,3 +1,4 @@
+import * as Path from 'path'
 import {
   Repository,
   ILocalRepositoryState,
@@ -26,6 +27,10 @@ export type RepositoryListGroup =
       kind: 'enterprise'
       host: string
     }
+  | {
+      kind: 'otherFolder'
+      folder: string
+    }
 
 /**
  * Returns a unique grouping key (string) for a repository group. Doubles as a
@@ -41,11 +46,21 @@ export const getGroupKey = (group: RepositoryListGroup) => {
       return `1:dotcom:${group.owner.login}`
     case 'enterprise':
       return `2:enterprise:${group.host}`
+    case 'otherFolder':
+      return `3:other:${group.folder.toLowerCase()}`
     case 'other':
-      return `3:other`
+      // '~' sorts after all lowercase letters so the plain "Other" bucket lands
+      // below any folder groups that share the '3:other:' prefix.
+      return `3:other:~`
     default:
       assertNever(group, `Unknown repository group kind ${kind}`)
   }
+}
+
+const getParentFolderName = (repoPath: string): string | null => {
+  const parent = Path.dirname(repoPath)
+  const base = Path.basename(parent)
+  return base.length > 0 && base !== parent ? base : null
 }
 export type Repositoryish = Repository | CloningRepository
 
@@ -102,6 +117,8 @@ export function groupRepositories(
     addToGroup(getGroupForRepository(repo), repo)
   }
 
+  partitionOtherGroupByFolder(groups)
+
   return Array.from(groups)
     .sort(([xKey], [yKey]) => compare(xKey, yKey))
     .map(([, { group, repos }]) => ({
@@ -113,6 +130,58 @@ export function groupRepositories(
         groups
       ),
     }))
+}
+
+// Splits the catch-all "Other" bucket into per-parent-folder groups whenever
+// two or more local repos share the same parent directory name. Singletons and
+// repos without a meaningful parent folder stay in the residual "Other" group;
+// if nothing residual remains, the "Other" entry is removed entirely.
+function partitionOtherGroupByFolder(
+  groups: Map<string, RepoGroupItem>
+): void {
+  const otherKey = getGroupKey({ kind: 'other' })
+  const otherGroup = groups.get(otherKey)
+  if (!otherGroup || otherGroup.repos.length < 2) {
+    return
+  }
+
+  const byFolder = new Map<string, Repositoryish[]>()
+  const residual: Repositoryish[] = []
+
+  for (const repo of otherGroup.repos) {
+    const folder = getParentFolderName(repo.path)
+    if (folder === null) {
+      residual.push(repo)
+      continue
+    }
+    const existing = byFolder.get(folder)
+    if (existing) {
+      existing.push(repo)
+    } else {
+      byFolder.set(folder, [repo])
+    }
+  }
+
+  let promoted = false
+  for (const [folder, repos] of byFolder) {
+    if (repos.length >= 2) {
+      const group: RepositoryListGroup = { kind: 'otherFolder', folder }
+      groups.set(getGroupKey(group), { group, repos })
+      promoted = true
+    } else {
+      residual.push(repos[0])
+    }
+  }
+
+  if (!promoted) {
+    return
+  }
+
+  if (residual.length === 0) {
+    groups.delete(otherKey)
+  } else {
+    otherGroup.repos = residual
+  }
 }
 
 // Returns the display title for a repository, which is either the alias

@@ -245,6 +245,8 @@ export class RepositoriesList extends React.Component<
       return group.host
     } else if (kind === 'other') {
       return 'Other'
+    } else if (kind === 'otherFolder') {
+      return group.folder
     } else if (kind === 'dotcom') {
       return group.owner.login
     } else if (kind === 'recent') {
