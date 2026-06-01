@@ -3024,6 +3024,7 @@ export class App extends React.Component<IAppProps, IAppState> {
         }
         onRemoveRepository={this.removeRepository}
         onViewOnGitHub={this.viewOnGitHub}
+        onOpenRemoteInBrowser={this.openRemoteInBrowser}
         onOpenInShell={this.openInShell}
         onShowRepository={this.showRepository}
         onOpenInExternalEditor={this.openInExternalEditor}
@@ -3046,6 +3047,16 @@ export class App extends React.Component<IAppProps, IAppState> {
     if (url) {
       this.props.dispatcher.openInBrowser(url)
     }
+  }
+
+  private openRemoteInBrowser = (
+    repository: Repository | CloningRepository | null
+  ) => {
+    if (!(repository instanceof Repository)) {
+      return
+    }
+
+    this.props.dispatcher.openRemoteInBrowser(repository)
   }
 
   private openInShell = (repository: Repository | CloningRepository) => {
@@ -3215,6 +3226,7 @@ export class App extends React.Component<IAppProps, IAppState> {
       onChangeRepositoryAlias: onChangeRepositoryAlias,
       onRemoveRepositoryAlias: onRemoveRepositoryAlias,
       onViewOnGitHub: this.viewOnGitHub,
+      onOpenRemoteInBrowser: this.openRemoteInBrowser,
       repository: repository,
       shellLabel: this.state.useCustomShell
         ? undefined

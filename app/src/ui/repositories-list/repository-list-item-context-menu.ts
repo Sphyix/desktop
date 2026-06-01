@@ -14,6 +14,7 @@ interface IRepositoryListItemContextMenuConfig {
   externalEditorLabel: string | undefined
   askForConfirmationOnRemoveRepository: boolean
   onViewOnGitHub: (repository: Repositoryish) => void
+  onOpenRemoteInBrowser: (repository: Repositoryish) => void
   onOpenInShell: (repository: Repositoryish) => void
   onShowRepository: (repository: Repositoryish) => void
   onOpenInExternalEditor: (repository: Repositoryish) => void
@@ -51,6 +52,13 @@ export const generateRepositoryListContextMenu = (
       label: 'View on GitHub',
       action: () => config.onViewOnGitHub(repository),
       enabled: github,
+    },
+    {
+      label: __DARWIN__
+        ? 'Open Remote in a Browser'
+        : 'Open remote in a browser',
+      action: () => config.onOpenRemoteInBrowser(repository),
+      enabled: !missing,
     },
     {
       label: openInShell,

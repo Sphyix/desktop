@@ -63,6 +63,16 @@ export function parseRemote(url: string): IGitRemoteURL | null {
   return null
 }
 
+/** Convert a git remote URL (ssh or https) into a browser-openable https URL. */
+export function getRemoteBrowserURL(url: string): string | null {
+  const parsed = parseRemote(url)
+  if (parsed !== null) {
+    return `https://${parsed.hostname}/${parsed.owner}/${parsed.name}`
+  }
+  // Fall back to the raw URL if it's already an http(s) link we can't parse.
+  return /^https?:\/\//i.test(url) ? url : null
+}
+
 export interface IRepositoryIdentifier {
   readonly hostname: string | null
   readonly owner: string

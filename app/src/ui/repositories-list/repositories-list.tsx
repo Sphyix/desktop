@@ -57,6 +57,9 @@ interface IRepositoriesListProps {
   /** Called when the repository should be opened on GitHub in the default web browser. */
   readonly onViewOnGitHub: (repository: Repositoryish) => void
 
+  /** Called when the repository's first git remote should be opened in the default web browser. */
+  readonly onOpenRemoteInBrowser: (repository: Repositoryish) => void
+
   /** Called when the repository should be shown in the shell. */
   readonly onOpenInShell: (repository: Repositoryish) => void
 
@@ -359,6 +362,7 @@ export class RepositoriesList extends React.Component<
       onChangeRepositoryAlias: this.onChangeRepositoryAlias,
       onRemoveRepositoryAlias: this.onRemoveRepositoryAlias,
       onViewOnGitHub: this.props.onViewOnGitHub,
+      onOpenRemoteInBrowser: this.props.onOpenRemoteInBrowser,
       repository: item.repository,
       shellLabel: this.props.shellLabel,
     })

@@ -313,7 +313,7 @@ import {
   findAssociatedPullRequest,
   isPullRequestAssociatedWithBranch,
 } from '../helpers/pull-request-matching'
-import { parseRemote } from '../../lib/remote-parsing'
+import { getRemoteBrowserURL, parseRemote } from '../../lib/remote-parsing'
 import { createTutorialRepository } from './helpers/create-tutorial-repository'
 import { sendNonFatalException } from '../helpers/non-fatal-exception'
 import { getDefaultDir } from '../../ui/lib/default-dir'
@@ -6397,6 +6397,19 @@ export class AppStore extends TypedBaseStore<IAppState> {
   /** Takes a URL and opens it using the system default application */
   public _openInBrowser(url: string): Promise<boolean> {
     return shell.openExternal(url)
+  }
+
+  /** Opens the repository's first git remote in the default browser. */
+  public async _openRemoteInBrowser(repository: Repository): Promise<void> {
+    const remotes = await getRemotes(repository)
+    if (remotes.length === 0) {
+      return
+    }
+
+    const url = getRemoteBrowserURL(remotes[0].url)
+    if (url !== null) {
+      await this._openInBrowser(url)
+    }
   }
 
   public async _editGlobalGitConfig() {

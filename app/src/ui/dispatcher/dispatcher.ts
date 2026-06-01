@@ -1474,6 +1474,11 @@ export class Dispatcher {
     return this.appStore._openInBrowser(url)
   }
 
+  /** Open the repository's first git remote in a browser */
+  public openRemoteInBrowser(repository: Repository): Promise<void> {
+    return this.appStore._openRemoteInBrowser(repository)
+  }
+
   /** Add the pattern to the repository's gitignore. */
   public appendIgnoreRule(
     repository: Repository,
